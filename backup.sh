@@ -1,22 +1,24 @@
 #!/bin/bash
-BWBIN=/volume1/backup/vaultwarden/scripts/bw
+BWBIN=/volume1/scripts/vaultwarden-export/bw
 BACKUP_LOCATION=/volume1/backup/vaultwarden/export
-CONFIG_LOCATION=/volume1/backup/vaultwarden/scripts/config
-LOG_LOCATION=/volume1/backup/vaultwarden/scripts/logs
+CONFIG_LOCATION=/volume1/scripts/vaultwarden-export/config
+LOG_LOCATION=/volume1/scripts/vaultwarden-export/logs
+SERVER_LOCATION=https://bitwarden.com
 BREAK="=========================================="
 DATE=$(date +%Y%m%d)
 DATETIME=$(date +'%Y%m%d %H:%M')
 ACTION=$1
 USER=$2
 ENCPASS=$3
-RETENTION=14
-DRYRUN=true
+RETENTION=7
+DRYRUN=false
 
 BW_BACKUP_FILE=$BACKUP_LOCATION/backup-$USER-$DATE.bck.gpg
 BW_BACKUP_ORG_FILE=$BACKUP_LOCATION/backup-org-$USER-$DATE.bck.gpg
 LOG_FILE=$LOG_LOCATION/log-$USER-$DATE.txt
 
 function login() {
+    $BWBIN config server $SERVER_LOCATION --raw
     source <(gpg -qd --batch --passphrase "$ENCPASS" $CONFIG_LOCATION/$USER.dat.gpg)
 	export BW_CLIENTID=$BW_CLIENTID
 	export BW_CLIENTSECRET=$BW_CLIENTSECRET
@@ -87,7 +89,7 @@ EOF
 }
 
 function cleanup() {
-	FILDEL=$($BACKUP_LOCATION/backup-* -mtime +$RETENTION -type f| wc -l)
+	FILDEL=$(find $BACKUP_LOCATION/backup-* -mtime +$RETENTION -type f| wc -l)
 	if (( $FILDEL > 0 ))
 	then
 		echo Remove backups and logs older as $RETENTION days.
@@ -103,19 +105,19 @@ function cleanup() {
 			fi
 			echo
 			echo Logs which would be removed:
-			find $LOG_LOCATION/log-* -mtime +$RETENTION -type f
+			find $LOG_LOCATION/log-$USER-* -mtime +$RETENTION -type f
 		else 
 			echo "Deleted backups:"
-			find $BACKUP_LOCATION/backup-$USER-* -mtime +$RETENTION -type f --delete -print
+			find $BACKUP_LOCATION/backup-$USER-* -mtime +$RETENTION -type f -delete -print
 			if [[ "$USER" == "martijn" ]]
 			then
 				echo
 				echo Backups from organisations deleted:
-				find $BACKUP_LOCATION/backup-org-$USER-* -mtime +$RETENTION -type f --delete -print
+				find $BACKUP_LOCATION/backup-org-$USER-* -mtime +$RETENTION -type f -delete -print
 			fi
 			echo
 			echo "Deleted logs:"
-			find $LOG_LOCATION/log-* -mtime +$RETENTION -type f --delete -print
+			find $LOG_LOCATION/log-$USER-* -mtime +$RETENTION -type f -delete -print
 		fi
 	else
 		echo No backups older as $RETENTION days.
@@ -162,7 +164,9 @@ function writefooter() {
 #fi
 case $ACTION in
 	export)
-		exportvault 2>&1 >> $LOG_FILE
+		#exportvault 2>&1 >> $LOG_FILE
+		exportvault | tee -a $LOG_FILE
+		type $LOG_FILE
 		;;
 	genconfig)
 		genconfig
