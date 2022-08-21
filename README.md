@@ -6,7 +6,7 @@ CONFIG_LOCATION='location to store config files'
 LOG_LOCATION='location for log files'
 
 After create a config file with:
-./backup.sh genconfig <user>
+./backup.sh genconfig [user]
 
 This will ask for several config items:
 BW_CLIENTID
@@ -16,4 +16,4 @@ BW_PASSWORD
 These will be stored in an gpg encrypted config file.
   
 After that you can run the export:
-./backup.sh export <user> <passphrase for config>
+./backup.sh export [user] [passphrase for config]
